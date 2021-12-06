@@ -1,0 +1,47 @@
+{
+  "name": "f0",
+  "version": "0.0.1",
+  "description": "factoria f0 NFT contract",
+  "main": "index.js",
+  "scripts": {
+    "reset": "git remote rm origin",
+    "lint:init": "node_modules/solhint/solhint.js --init",
+    "lint": "node_modules/solhint/solhint.js contracts/**/*.sol",
+    "build:solidity": "npx hardhat compile",
+    "build:js": "node_modules/.bin/webpack",
+    "build": "npm run build:solidity && npm run build:js",
+    "test": "npx hardhat test",
+    "deploy:solidity-localhost": "npx hardhat run --network localhost scripts/deploy.js",
+    "deploy:solidity-rinkeby": "npx hardhat run --network rinkeby scripts/deploy.js",
+    "deploy:solidity-mainnet": "npx hardhat run --network mainnet scripts/deploy.js",
+    "deploy:local": "npm run build:solidity && npm run deploy:solidity-localhost",
+    "deploy:rinkeby": "npm run build:solidity && npm run deploy:solidity-rinkeby",
+    "deploy:mainnet": "npm run build:solidity && npm run deploy:solidity-mainnet",
+    "verify:rinkeby": "npx hardhat run --network rinkeby scripts/verify.js",
+    "verify:mainnet": "npx hardhat run --network mainnet scripts/verify.js"
+  },
+  "author": "factoria-org",
+  "license": "BUSL-1.1",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-etherscan": "^2.1.8",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@openzeppelin/contracts": "^4.3.2",
+    "@openzeppelin/contracts-upgradeable": "^4.3.2",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.4.7",
+    "hardhat": "^2.6.6",
+    "hardhat-abi-exporter": "^2.3.0",
+    "hardhat-contract-sizer": "^2.1.1",
+    "hardhat-gas-reporter": "^1.0.4",
+    "multiformats": "^9.4.14",
+    "solhint": "^3.3.6"
+  },
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "invitelist": "^0.0.2",
+    "keccak256": "^1.0.3",
+    "merkletreejs": "^0.2.24"
+  }
+}

@@ -1,0 +1,233 @@
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity ^0.8.4;
+//import 'hardhat/console.sol';
+import "./F0ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
+  /**********************************************************
+  *
+  *   EVENTS
+  *
+  **********************************************************/
+  event Invited(bytes32 indexed key, bytes32 indexed cid);
+  event NSUpdated(string name, string symbol);
+  event Configured(Config config);
+  event WithdrawerUpdated(Withdrawer withdrawer);
+
+  /**********************************************************
+  *
+  *   DATA STRUCTURES
+  *
+  **********************************************************/
+  struct Config {
+    string placeholder;
+    string base;
+    uint64 supply;
+    bool permanent;
+  }
+  struct Invite {
+    uint128 price;
+    uint64 start;
+    uint64 limit;
+  }
+  struct Auth {
+    bytes32 key;
+    bytes32[] proof;
+  }
+  struct Withdrawer {
+    address account;
+    bool permanent;
+  }
+
+  /**********************************************************
+  *
+  *  VARIABLES
+  *
+  **********************************************************/
+  mapping (bytes32 => Invite) public invite;
+  Config public config;
+  Withdrawer public withdrawer;
+  uint public nextId;
+  uint private feeUsed;
+  string public URI;
+  address public royalty;
+
+  /**********************************************************
+  *
+  *  INITIALIZER
+  *
+  **********************************************************/
+  function initialize(string memory name, string memory symbol, Config calldata _config) initializer external {
+    __ERC721_init(name, symbol);
+    __Ownable_init();
+    setConfig(_config);
+  }
+
+  /**********************************************************
+  *
+  *  ADMIN
+  *
+  **********************************************************/
+  function setConfig(Config calldata _config) public onlyOwner {
+    require(!config.permanent, "permanent");
+    config = _config;
+    emit Configured(_config);
+  }
+  function setNS(string calldata name_, string calldata symbol_) external onlyOwner {
+    require(!config.permanent, "permanent");
+    _name = name_; 
+    _symbol = symbol_;
+    emit NSUpdated(_name, _symbol);
+  }
+  function setURI (string calldata _uri) external onlyOwner {
+    URI = _uri;
+  }
+  function setWithdrawer(Withdrawer calldata _withdrawer) external onlyOwner {
+    require(!withdrawer.permanent, "permanent");
+    withdrawer = _withdrawer; 
+    emit WithdrawerUpdated(_withdrawer);
+  }
+  function setInvite(bytes32 _key, bytes32 _cid, Invite calldata _invite) external onlyOwner {
+    if (nextId==0) nextId = 1;  // delay nextId setting until the first invite is made.
+    invite[_key] = _invite;
+    emit Invited(_key, _cid);
+  }
+  function withdraw() external payable {
+    /****************************************************************************************************
+    *
+    *  Authorization
+    *   - Either the owner or the withdrawer (in case it's set) can initiate withdraw()
+    *
+    ****************************************************************************************************/
+    require(_msgSender() == owner() || _msgSender() == withdrawer.account, "unauthorized");
+
+    /****************************************************************************************************
+    *
+    *  Fee => 1% of revenue with 1ETH cap
+    *   - compute 1%
+    *   - if paying 1% exceeds the 1ETH total fee used, only pay enough to reach 1ETH
+    *   - update the total fee used
+    *
+    ****************************************************************************************************/
+    uint balance = address(this).balance;
+    uint fee = 0;
+    if (feeUsed < 1 ether) {
+      fee = balance/100;
+      if (feeUsed + fee > 1 ether) fee = 1 ether - feeUsed;
+      feeUsed += fee;
+    }
+
+    /****************************************************************************************************
+    *
+    *   - if the withdrawer.account is not set (0x0 address), withdraw balance-fee to owner
+    *   - if the withdrawer.account is set, withdraw balance-fee to withdrawer.account
+    *
+    ****************************************************************************************************/
+    (bool sent1, ) = payable(
+      withdrawer.account == address(0) ? owner() : withdrawer.account
+    ).call{value: balance-fee}("");
+    require(sent1, "withdraw error1");
+
+    /****************************************************************************************************
+    *
+    *   - the fee is sent to 0x502b2FE7Cc3488fcfF2E16158615AF87b4Ab5C41
+    *
+    ****************************************************************************************************/
+    (bool sent2, ) = payable(address(0x502b2FE7Cc3488fcfF2E16158615AF87b4Ab5C41)).call{value: fee}("");
+    require(sent2, "withdraw error2");
+  }
+
+  /**********************************************************
+  *
+  *  TOKEN
+  *
+  **********************************************************/
+  function mint(Auth calldata auth, uint _count) external payable {
+    uint n = nextId;
+    Invite memory i = invite[auth.key];
+    require(verify(auth, _msgSender()), "wrong proof");
+    require(i.price * _count == msg.value, "wrong amount");
+    require(i.start <= block.timestamp, "not yet");
+    require(balanceOf(_msgSender()) + _count <= i.limit, "mint limit");
+    require(n+_count-1 <= config.supply, "sold out");
+    for(uint k=0; k<_count; k++) {
+      _safeMint(_msgSender(), n+k);
+    }
+    nextId += _count;
+  }
+  function gift(address _receiver, uint _count) external onlyOwner {
+    uint n = (nextId > 0 ? nextId : 1);
+    require(n+_count-1 <= config.supply, "sold out");
+    for(uint k=0; k<_count; k++) {
+      _safeMint(_receiver, n+k);
+    }
+    nextId += _count;
+  }
+  function burn(uint _tokenId) external {
+    require(_isApprovedOrOwner(_msgSender(), _tokenId), "unauthorized");
+    _burn(_tokenId);
+  }
+  function tokenURI(uint tokenId) public view override(ERC721Upgradeable) returns (string memory) {
+    require(tokenId > 0 && tokenId <= config.supply, "wrong tokenId");
+    if (bytes(config.base).length > 0) {
+      return string(abi.encodePacked(config.base, _toString(tokenId), ".json"));
+    } else {
+      return bytes(config.placeholder).length > 0 ?  config.placeholder : "ipfs://bafkreieqcdphcfojcd2vslsxrhzrjqr6cxjlyuekpghzehfexi5c3w55eq";
+    }
+  }
+
+  /**********************************************************
+  *
+  *  ROYALTY
+  *
+  **********************************************************/
+  function setRoyalty(address _address) external onlyOwner {
+    royalty = _address;
+  }
+  function royaltyInfo(uint tokenId, uint value) external view returns (address receiver, uint256 royaltyAmount) {
+    if (royalty == address(0)) {
+      return (owner(), value);
+    } else {
+      (, bytes memory r) = royalty.staticcall(abi.encodeWithSignature("get(uint256,uint256)", tokenId, value));
+      return abi.decode(r, (address,uint));
+    }
+  }
+  function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Upgradeable) returns (bool) {
+    return (interfaceId == 0x2a55205a || super.supportsInterface(interfaceId));
+  }
+
+  /**********************************************************
+  *
+  *  UTIL
+  *
+  **********************************************************/
+  function _toString(uint value) internal pure returns (string memory) {
+    uint temp = value;
+    uint digits;
+    while (temp != 0) {
+      digits++;
+      temp /= 10;
+    }
+    bytes memory buffer = new bytes(digits);
+    while (value != 0) {
+      digits--;
+      buffer[digits] = bytes1(uint8(48 + uint(value % 10)));
+      value /= 10;
+    }
+    return string(buffer);
+  }
+  function verify(Auth calldata auth, address account) internal pure returns (bool) {
+    if (auth.key == "") return true; 
+    bytes32 computedHash = keccak256(abi.encodePacked(account));
+    for (uint256 i = 0; i < auth.proof.length; i++) {
+      bytes32 proofElement = auth.proof[i];
+      if (computedHash <= proofElement) {
+        computedHash = keccak256(abi.encodePacked(computedHash, proofElement));
+      } else {
+        computedHash = keccak256(abi.encodePacked(proofElement, computedHash));
+      }
+    }
+    return computedHash == auth.key;
+  }
+}
