@@ -11,7 +11,7 @@ module.exports = {
 //  solidity: "0.8.4",
   gasReporter: {
     currency: "USD",
-    gasPrice: 150,
+//    gasPrice: 150,
     coinmarketcap: "abb5abcf-5b1f-443b-873f-3bc21d6019f7",
     enabled: true,
   },
