@@ -1,4 +1,4 @@
-const { ethers } = require('hardhat');
+const { network, ethers } = require('hardhat');
 const { expect } = require('chai')
 const InviteList = require('invitelist');
 const path = require('path')
@@ -61,7 +61,18 @@ const invite = async (cost) => {
   })
   await tx.wait()
 }
+
+const reset = async () => {
+  await network.provider.request({
+    method: "hardhat_reset",
+    params: [],
+  });
+}
+
 describe('withdraw', () => {
+  beforeEach(async () => {
+    await reset()
+  })
   it('default: owner can withdraw', async () => {
     await util.deploy();
     await util.clone(util.deployer.address, "test", "T", {
@@ -128,9 +139,46 @@ describe('withdraw', () => {
 
 
   })
-  it('FACTORIA takes fee ONLY UP TO 1 ETH cap', async () => {
+  it('FACTORIA takes 0 fee when trying to withdraw 0 ETH', async () => {
+    await util.deploy();
+    await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 10000,
+      base: "ipfs://"
+    })
+    let tx = await util.token.withdraw()
+    let r = await tx.wait()
 
-    // A. 0.1ETH * 2000 => 200 ETH revenue => 1% of 200ETH should be 2ETH but because of the cap, the fee is 1 ETH
+    // factoria has made 0 ETH
+    let factoriaBalanceAfter = await ethers.provider.getBalance(FACTORIA);
+    expect(factoriaBalanceAfter).to.equal(0)
+
+  })
+  it('FACTORIA takes 1% fee if it is below 1 ETH withdraw', async () => {
+    // 0.1ETH * 100 => 10 ETH revenue => 1% FEE == 0.1 ETH
+    let factoriaBalanceBefore = await ethers.provider.getBalance(FACTORIA);
+    let r = await makeMoney(Math.pow(10, 17), 100)
+    let factoriaBalanceAfter = await ethers.provider.getBalance(FACTORIA);
+    // Final result is equal to
+    expect(r.after).to.equal(
+      // the Previous balance
+      r.before
+      // minus the eth spent for withdraw
+      .sub(r.spent)
+      // plus revenue (10ETH)
+      .add(ethers.BigNumber.from("" + Math.pow(10, 18) * 10))
+      // minus fee (0.1ETH)
+      .sub(ethers.BigNumber.from("" + Math.pow(10, 18) * 0.1))
+    )
+
+    // Factoria has made 0.1 ETH
+    expect(factoriaBalanceAfter).to.equal(
+      factoriaBalanceBefore.add(ethers.BigNumber.from("" + Math.pow(10, 18) * 0.1))
+    )
+
+  })
+  it('FACTORIA takes 1ETH fee if the revenue is 200ETH and the 1% is 2ETH', async () => {
+    // 0.1ETH * 2000 => 200 ETH revenue => 1% of 200ETH should be 2ETH but because of the cap, the fee is 1 ETH
     let factoriaBalanceBefore = await ethers.provider.getBalance(FACTORIA);
     let r = await makeMoney(Math.pow(10, 17), 2000)
     let factoriaBalanceAfter = await ethers.provider.getBalance(FACTORIA);
@@ -139,33 +187,35 @@ describe('withdraw', () => {
       // the Previous balance
       r.before.sub(r.spent)
       // plus revenue (200ETH)
-      .add(ethers.BigNumber.from("" + Math.pow(10, 20)).mul(2))
+      .add(ethers.BigNumber.from("" + Math.pow(10, 18) * 0.1 * 2000))
       // minus fee (1ETH capped)
       .sub(ethers.BigNumber.from("" + Math.pow(10, 18)))
     )
+
+    // Factoria has made 1 ETH
     expect(factoriaBalanceAfter).to.equal(
       factoriaBalanceBefore.add(ethers.BigNumber.from("" + Math.pow(10, 18)))
     )
-
-    // B. 0.1ETH * 100 => 10 ETH revenue => 1% FEE == 0.1 ETH
-    factoriaBalanceBefore = await ethers.provider.getBalance(FACTORIA);
-    r = await makeMoney(Math.pow(10, 17), 100)
-    factoriaBalanceAfter = await ethers.provider.getBalance(FACTORIA);
+  })
+  it('FACTORIA takes 1ETH fee if the revenue is 100ETH and the 1% is 1ETH', async () => {
+    // 1ETH * 100 => 100 ETH revenue => 1% of 100ETH should be 1ETH
+    let factoriaBalanceBefore = await ethers.provider.getBalance(FACTORIA);
+    let r = await makeMoney(Math.pow(10, 18), 100)
+    let factoriaBalanceAfter = await ethers.provider.getBalance(FACTORIA);
     // Final result is equal to
     expect(r.after).to.equal(
       // the Previous balance
-      r.before
-      // minus the eth spent for withdraw
-      .sub(r.spent)
+      r.before.sub(r.spent)
       // plus revenue (200ETH)
-      .add(ethers.BigNumber.from("" + Math.pow(10, 19)))
-      // minus fee (0.1ETH)
-      .sub(ethers.BigNumber.from("" + Math.pow(10, 17)))
-    )
-    expect(factoriaBalanceAfter).to.equal(
-      factoriaBalanceBefore.add(ethers.BigNumber.from("" + Math.pow(10, 17)))
+      .add(ethers.BigNumber.from("" + Math.pow(10, 18) * 100))
+      // minus fee (1ETH)
+      .sub(ethers.BigNumber.from("" + Math.pow(10, 18)))
     )
 
+    // Factoria has made 1 ETH
+    expect(factoriaBalanceAfter).to.equal(
+      factoriaBalanceBefore.add(ethers.BigNumber.from("" + Math.pow(10, 18)))
+    )
   })
   it('multiple withdrawals', async () => {
 
@@ -334,7 +384,7 @@ describe('withdraw', () => {
     })
     await expect(tx).to.be.revertedWith("Ownable: caller is not the owner")
   })
-  it('set withdrawer to alice => withdraw sends money to alice', async () => {
+  it('if the owner sets alice as withdrawer, calling withdraw() sends money to alice, not the owner', async () => {
     await util.deploy();
     await util.clone(util.deployer.address, "test", "T", {
       placeholder: "ipfs://placeholder",
@@ -348,6 +398,7 @@ describe('withdraw', () => {
     })
     await tx.wait()
     let c = await util.token.invite(util.all)
+    // Alice mints some tokens
     let aliceToken = util.getToken(util.alice)
     tx = await aliceToken.mint({
       key: util.all,
@@ -357,6 +408,7 @@ describe('withdraw', () => {
     })
     await tx.wait()
 
+    // The owner sets alice as the withdrawer
     tx = await util.token.setWithdrawer({
       account: util.alice.address,
       permanent: false
@@ -364,31 +416,40 @@ describe('withdraw', () => {
     await tx.wait()
 
     let factoriaBalanceBefore = await ethers.provider.getBalance(FACTORIA);
-
     let aliceBeforeBalance = await ethers.provider.getBalance(util.alice.address);
+    let deployerBeforeBalance = await ethers.provider.getBalance(util.deployer.address);
 
-    // withdraw with deployer account
+    // Let's withdraw with the deployer account => This should go through, but the money will be sent to alice the withdrawer
     tx = await util.token.withdraw()
+    let r = await tx.wait()
+    let spentEth = r.cumulativeGasUsed.mul(r.effectiveGasPrice)
+
+    // the contract balance should be 0 after withdrawing
     let contractBalance = await ethers.provider.getBalance(util.token.address);
-    // the contract balance should be 0
     expect(contractBalance).to.equal(0)
 
-    let aliceAfterBalance = await ethers.provider.getBalance(util.alice.address);
     // alice balance should have increased
+    let aliceAfterBalance = await ethers.provider.getBalance(util.alice.address);
     expect(aliceAfterBalance).to.equal(
       aliceBeforeBalance.add(
-        ethers.BigNumber.from(Math.pow(10, 15)).mul(3).mul(99).div(100)
+        ethers.BigNumber.from(Math.pow(10, 15)).mul(3).mul(99).div(100) // 0.003 ETH * 99% Profit
       )
     )
 
-    // factoria blance should have increased
+    // factoria balance should have increased
     let factoriaBalance = await ethers.provider.getBalance(FACTORIA);
     expect(factoriaBalance).to.equal(
-      factoriaBalanceBefore.add(ethers.BigNumber.from(Math.pow(10, 15)).mul(3).div(100))
+      factoriaBalanceBefore.add(ethers.BigNumber.from(Math.pow(10, 15)).mul(3).div(100))  // 0.003 ETH * 1% Fee
+    )
+
+    // deployer's balance should be equal to the previous balance minus the gas spent
+    let deployerAfterBalance = await ethers.provider.getBalance(util.deployer.address);
+    expect(deployerAfterBalance).to.equal(
+      deployerBeforeBalance.sub(spentEth)
     )
 
   })
-  it('owner or withdrawer can withdraw', async () => {
+  it('both the owner and the withdrawer can call withdraw()', async () => {
     await util.deploy();
     await util.clone(util.deployer.address, "test", "T", {
       placeholder: "ipfs://placeholder",
@@ -419,19 +480,22 @@ describe('withdraw', () => {
     })
     await tx.wait()
 
-    let beforeBalance = await ethers.provider.getBalance(util.alice.address);
+    let aliceBeforeBalance = await ethers.provider.getBalance(util.alice.address);
 
     // withdrawn by DEPLOYER (not alice)
     // which means alice didn't pay any gas.
     tx = await util.token.withdraw()
     let r = await tx.wait()
-    let afterBalance = await ethers.provider.getBalance(util.alice.address);
+    let aliceAfterBalance = await ethers.provider.getBalance(util.alice.address);
     let spentEth = 0 // no gas spent because alice didn't trigger withdraw
-    expect(afterBalance).to.equal(
-      beforeBalance
+
+    // Alice new balance is the old balance minus the gas spent plus the profit
+    expect(aliceAfterBalance).to.equal(
+      aliceBeforeBalance
       .sub(spentEth)
-      .add(ethers.BigNumber.from(Math.pow(10, 15)).mul(3).mul(99).div(100))
+      .add(ethers.BigNumber.from(Math.pow(10, 15)).mul(3).mul(99).div(100)) // 0.003ETH * 99%
     )
+
     // The contract balance is now 0
     let contractBalance = await ethers.provider.getBalance(util.token.address);
     expect(contractBalance).to.equal(0)
@@ -446,17 +510,17 @@ describe('withdraw', () => {
     await tx.wait()
 
     // Withdran by Alice (the withdrawer)
-    beforeBalance = await ethers.provider.getBalance(util.alice.address);
+    aliceBeforeBalance = await ethers.provider.getBalance(util.alice.address);
     tx = await aliceToken.withdraw()
     r = await tx.wait()
     spentEth = r.cumulativeGasUsed.mul(r.effectiveGasPrice)
-    afterBalance = await ethers.provider.getBalance(util.alice.address);
+    aliceAfterBalance = await ethers.provider.getBalance(util.alice.address);
 
     // Withdrawn by Alice account, so alice spent some gas.
-    expect(afterBalance).to.equal(
-      beforeBalance
+    expect(aliceAfterBalance).to.equal(
+      aliceBeforeBalance
       .sub(spentEth)
-      .add(ethers.BigNumber.from(Math.pow(10, 15)).mul(5).mul(99).div(100))
+      .add(ethers.BigNumber.from(Math.pow(10, 15)).mul(5).mul(99).div(100)) // 0.005ETH * 99%
     )
 
     // the contract balance is 0

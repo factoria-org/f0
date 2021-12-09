@@ -32,6 +32,84 @@ describe('mint', () => {
     let owner = await util.token.ownerOf(1)
     expect(owner).to.equal(util.alice.address)
   })
+  it('nextId is 0 at first', async () => {
+    await util.deploy();
+    await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 10000,
+      base: "ipfs://"
+    })
+    let nextId = await util.token.nextId()
+    expect(nextId.toString()).to.equal("0")
+  })
+  it('inviting turns nextId to 1', async () => {
+    await util.deploy();
+    await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 10000,
+      base: "ipfs://"
+    })
+
+    let tx = await util.token.setInvite(util.all, util._cid, {
+      start: 0,
+      price: 0,
+      limit: 100,
+    })
+    await tx.wait()
+
+    let nextId = await util.token.nextId()
+    expect(nextId.toString()).to.equal("1")
+  })
+  it('minting one turns nextId to 2', async () => {
+    await util.deploy();
+    await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 10000,
+      base: "ipfs://"
+    })
+
+    let tx = await util.token.setInvite(util.all, util._cid, {
+      start: 0,
+      price: 0,
+      limit: 100,
+    })
+    await tx.wait()
+
+    let aliceToken = util.getToken(util.alice)
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: [],
+    }, 1)
+    await tx.wait()
+
+    let nextId = await util.token.nextId()
+    expect(nextId.toString()).to.equal("2")
+  })
+  it('minting increments nextId', async () => {
+    await util.deploy();
+    await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 10000,
+      base: "ipfs://"
+    })
+    let tx = await util.token.setInvite(util.all, util._cid, {
+      start: 0,
+      price: 0,
+      limit: 100,
+    })
+    await tx.wait()
+
+    // Alice tries to mint 1 => should be able to mint one
+    let aliceToken = util.getToken(util.alice)
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: [],
+    }, 10)
+    await tx.wait()
+
+    let nextId = await util.token.nextId()
+    expect(nextId.toString()).to.equal("11")
+  })
   it('multi mint', async () => {
     await util.deploy();
     await util.clone(util.deployer.address, "test", "T", {
@@ -65,6 +143,31 @@ describe('mint', () => {
     tx = util.token.ownerOf(4)
     await expect(tx).to.be.revertedWith("ERC721: owner query for nonexistent token")
   })
+  it('after reaching the total supply, the nextId is the total supply + 1', async () => {
+    await util.deploy();
+    await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 100,
+      base: "ipfs://"
+    })
+    let tx = await util.token.setInvite(util.all, util._cid, {
+      start: 0,
+      price: 0,
+      limit: 100,
+    })
+    await tx.wait()
+
+    // Alice tries to mint 3 tokens => Should work
+    let aliceToken = util.getToken(util.alice)
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: []
+    }, 100)
+    await tx.wait()
+
+    let nextId = await util.token.nextId()
+    expect(nextId.toString()).to.equal("101")
+  })
   it('cannot mint more than total supply', async () => {
     await util.deploy();
     await util.clone(util.deployer.address, "test", "T", {
@@ -85,6 +188,14 @@ describe('mint', () => {
       proof: [],
     }, 11)
     await expect(tx).to.be.revertedWith("sold out")
+
+    // try to mint 10 => should work
+    tx = await util.token.mint({
+      key: util.all,
+      proof: [],
+    }, 10)
+    let o = await util.token.ownerOf(10)
+    expect(o).to.equal(util.deployer.address)
 
   })
   it('minting transaction must send the right amount', async () => {
