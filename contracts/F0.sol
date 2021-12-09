@@ -183,13 +183,16 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
   *
   **********************************************************/
   function setRoyalty(address _address) external onlyOwner {
+    require(!config.permanent, "permanent");
     royalty = _address;
   }
   function royaltyInfo(uint tokenId, uint value) external view returns (address receiver, uint256 royaltyAmount) {
     if (royalty == address(0)) {
-      return (owner(), value);
+      // Default: No royalty
+      return (royalty, 0);
     } else {
-      (, bytes memory r) = royalty.staticcall(abi.encodeWithSignature("get(uint256,uint256)", tokenId, value));
+      // If the royalty address is set, call the contract to get the royalty values
+      (, bytes memory r) = royalty.staticcall(abi.encodeWithSignature("get(address,uint256,uint256)", address(this), tokenId, value));
       return abi.decode(r, (address,uint));
     }
   }
