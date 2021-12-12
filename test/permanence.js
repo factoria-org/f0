@@ -19,7 +19,7 @@ describe('permanence', () => {
       key: util.all,
       proof: [],
     }, 1)
-    await expect(tx).to.be.revertedWith("mint limit")
+    await expect(tx).to.be.revertedWith("10")
 
     // Even though "permanent" is true, should be able to create an invite
     // Now create an invite for "all" => can mint 1 for free
@@ -55,7 +55,7 @@ describe('permanence', () => {
       base: "ipfs://bafy/",
       permanent: false 
     })
-    await expect(tx).to.be.revertedWith("permanent")
+    await expect(tx).to.be.revertedWith("1")
   })
   it('if made permanent during deployment, cannot change the configuration anymore', async () => {
     await util.deploy();
@@ -74,7 +74,7 @@ describe('permanence', () => {
       base: "ipfs://bafy/",
       permanent: true,
     })
-    await expect(tx).to.be.revertedWith("permanent")
+    await expect(tx).to.be.revertedWith("1")
 
   })
   it('can update the configuration if not made permanent', async () => {
@@ -132,7 +132,7 @@ describe('permanence', () => {
       base: "ipfs://5678/",
       permanent: true
     })
-    await expect(tx).to.be.revertedWith('permanent')
+    await expect(tx).to.be.revertedWith('1')
 
   })
   it('setWithdrawer permanence', async () => {
@@ -170,13 +170,13 @@ describe('permanence', () => {
       account: util.alice.address,
       permanent: false 
     })
-    await expect(tx).to.be.revertedWith("permanent");
+    await expect(tx).to.be.revertedWith("3")
 
     tx = util.token.setWithdrawer({
       account: util.alice.address,
       permanent: true
     })
-    await expect(tx).to.be.revertedWith("permanent");
+    await expect(tx).to.be.revertedWith("3")
     
   })
 })

@@ -57,6 +57,6 @@ describe('royalty', () => {
     })
     let royalty = await ro()
     let tx = util.token.setRoyalty(royalty.address)
-    await expect(tx).to.be.revertedWith("permanent");
+    await expect(tx).to.be.revertedWith("16")
   })
 })

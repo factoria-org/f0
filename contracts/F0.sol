@@ -92,12 +92,12 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
   *
   **********************************************************/
   function setConfig(Config calldata _config) public onlyOwner {
-    require(!config.permanent, "permanent");
+    require(!config.permanent, "1");
     config = _config;
     emit Configured(_config);
   }
   function setNS(string calldata name_, string calldata symbol_) external onlyOwner {
-    require(!config.permanent, "permanent");
+    require(!config.permanent, "2");
     _name = name_; 
     _symbol = symbol_;
     emit NSUpdated(_name, _symbol);
@@ -106,7 +106,7 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     URI = _uri;
   }
   function setWithdrawer(Withdrawer calldata _withdrawer) external onlyOwner {
-    require(!withdrawer.permanent, "permanent");
+    require(!withdrawer.permanent, "3");
     withdrawer = _withdrawer; 
     emit WithdrawerUpdated(_withdrawer);
   }
@@ -122,7 +122,7 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     *   - Either the owner or the withdrawer (in case it's set) can initiate withdraw()
     *
     ****************************************************************************************************/
-    require(_msgSender() == owner() || _msgSender() == withdrawer.account, "unauthorized");
+    require(_msgSender() == owner() || _msgSender() == withdrawer.account, "4");
 
     /****************************************************************************************************
     *
@@ -149,7 +149,7 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     (bool sent1, ) = payable(
       withdrawer.account == address(0) ? owner() : withdrawer.account
     ).call{value: balance-fee}("");
-    require(sent1, "withdraw error1");
+    require(sent1, "5");
 
     /****************************************************************************************************
     *
@@ -157,7 +157,7 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     *
     ****************************************************************************************************/
     (bool sent2, ) = payable(address(0x502b2FE7Cc3488fcfF2E16158615AF87b4Ab5C41)).call{value: fee}("");
-    require(sent2, "withdraw error2");
+    require(sent2, "6");
   }
 
   /**********************************************************
@@ -168,30 +168,33 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
   function mint(Auth calldata auth, uint _count) external payable {
     uint n = nextId;
     Invite memory i = invite[auth.key];
-    require(verify(auth, _msgSender()), "wrong proof");
-    require(i.price * _count == msg.value, "wrong amount");
-    require(i.start <= block.timestamp, "not yet");
-    require(balanceOf(_msgSender()) + _count <= i.limit, "mint limit");
-    require(n+_count-1 <= config.supply, "sold out");
+    require(verify(auth, _msgSender()), "7");
+    require(i.price * _count == msg.value, "8");
+    require(i.start <= block.timestamp, "9");
+    require(balanceOf(_msgSender()) + _count <= i.limit, "10");
+    require(n+_count-1 <= config.supply, "11");
     for(uint k=0; k<_count; k++) {
       _safeMint(_msgSender(), n+k);
     }
-    nextId += _count;
+    nextId = n + _count;
   }
   function gift(address _receiver, uint _count) external onlyOwner {
+    // first time: nextId is 0 => n is 1
+    // after that: nextId is 1 or greater => n is the same as nextId
     uint n = (nextId > 0 ? nextId : 1);
-    require(n+_count-1 <= config.supply, "sold out");
+    require(_count > 0, "12");
+    require(n+_count-1 <= config.supply, "13");
     for(uint k=0; k<_count; k++) {
       _safeMint(_receiver, n+k);
     }
-    nextId += _count;
+    nextId = n + _count;
   }
   function burn(uint _tokenId) external {
-    require(_isApprovedOrOwner(_msgSender(), _tokenId), "unauthorized");
+    require(_isApprovedOrOwner(_msgSender(), _tokenId), "14");
     _burn(_tokenId);
   }
   function tokenURI(uint tokenId) public view override(ERC721Upgradeable) returns (string memory) {
-    require(tokenId > 0 && tokenId <= config.supply, "wrong tokenId");
+    require(tokenId > 0 && tokenId <= config.supply, "15");
     if (bytes(config.base).length > 0) {
       return string(abi.encodePacked(config.base, _toString(tokenId), ".json"));
     } else {
@@ -205,7 +208,7 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
   *
   **********************************************************/
   function setRoyalty(address _address) external onlyOwner {
-    require(!config.permanent, "permanent");
+    require(!config.permanent, "16");
     royalty = _address;
   }
   function royaltyInfo(uint tokenId, uint value) external view returns (address receiver, uint256 royaltyAmount) {

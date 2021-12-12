@@ -58,7 +58,7 @@ describe('admin', () => {
     // Alice tries to addCollection to herself when she doesn't own it
     let aliceFactory = util.getFactory(util.alice)
     let tx = aliceFactory.addCollection(util.alice.address, util.token.address)
-    await expect(tx).to.be.revertedWith('unauthorized');
+    await expect(tx).to.be.revertedWith('2')
 
     // Alice tries to transferOwnership when she doesn't own it
     let aliceToken = util.getToken(util.alice)
@@ -85,7 +85,7 @@ describe('admin', () => {
     await tx.wait()
     // now Alice owns the collection, so the deployer shouldn't be able to call factory.addCollection()
     tx = util.factory.addCollection(util.alice.address, util.token.address)
-    await expect(tx).to.be.revertedWith('unauthorized');
+    await expect(tx).to.be.revertedWith('2')
   })
   it('pinning to the dashboard and transferring ownership are separate, so calling transferOwnership before factory.addColleciton should work', async () => {
     await util.deploy();
@@ -123,9 +123,7 @@ describe('admin', () => {
       base: "ipfs://"
     })
     let uri = await util.token.URI()
-    console.log("uri", uri)
     await util.token.setURI("ipfs://")
     uri = await util.token.URI()
-    console.log("uri", uri)
   })
 })

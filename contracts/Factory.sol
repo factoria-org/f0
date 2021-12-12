@@ -24,7 +24,7 @@ contract Factory is OwnableUpgradeable {
     token.transferOwnership(_receiver);
     if (msg.value > 0) {
       (bool sent, ) = payable(_receiver).call{value: msg.value}("");
-      require(sent, "infusion error");
+      require(sent, "1");
     }
     emit CollectionAdded(_msgSender(), _receiver, clone);
     return clone;
@@ -48,7 +48,7 @@ contract Factory is OwnableUpgradeable {
   function addCollection(address _receiver, address _collection) external {
     F0 token = F0(_collection);
     address _collectionOwner = token.owner();
-    require(_msgSender() == _collectionOwner, "unauthorized");
+    require(_msgSender() == _collectionOwner, "2");
     emit CollectionAdded(_msgSender(), _receiver, _collection);
   }
 }

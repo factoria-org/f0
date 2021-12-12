@@ -54,7 +54,7 @@ describe('burn tokens', () => {
     // Try to burn the token as alice => should fail
     let aliceToken = util.getToken(util.alice)
     tx = aliceToken.burn(1);
-    await expect(tx).to.be.revertedWith("unauthorized")
+    await expect(tx).to.be.revertedWith("14")
 
   })
 })

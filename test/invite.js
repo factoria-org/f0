@@ -220,7 +220,7 @@ describe('invite', () => {
       key,
       proof: aliceProof
     }, 2)
-    await expect(tx).to.be.revertedWith('wrong proof');
+    await expect(tx).to.be.revertedWith('7');
 
     // Get bob's merkle proof
     let bobProof = list.proof(util.bob.address)
@@ -264,7 +264,7 @@ describe('invite', () => {
       proof: [],
     }, 1)
     // should revert with "mint limit" because by default it's all zero
-    await expect(tx).to.be.revertedWith("mint limit")
+    await expect(tx).to.be.revertedWith("10")
   })
   it("empty merkle proof array should fail if not 'all' condition", async () => {
     await util.deploy();
@@ -292,7 +292,7 @@ describe('invite', () => {
       key: list.root(),
       proof: [],
     }, 1)
-    await expect(tx).to.be.revertedWith("wrong proof")
+    await expect(tx).to.be.revertedWith("7")
   })
   it("submit merkle root with empty proof should work if 'all' condition", async () => {
     await util.deploy();
@@ -350,7 +350,7 @@ describe('invite', () => {
       key: list.root(),
       proof: list.proof(util.alice.address)
     }, 1)
-    await expect(tx).to.be.revertedWith("wrong amount")
+    await expect(tx).to.be.revertedWith("8")
 
     // correct amount should work
     tx = await aliceToken.mint({
@@ -402,7 +402,7 @@ describe('invite', () => {
       key: giveawayInviteList.root(),
       proof
     }, 1)
-    await expect(tx).to.be.revertedWith("wrong proof")
+    await expect(tx).to.be.revertedWith("7")
     // 1.3. try to mint with an account on the giveaway list => should work
     proof = await giveawayInviteList.proof(giveawayAddresses[1])
     let giveawayToken = util.getToken(giveaway[1])
@@ -440,7 +440,7 @@ describe('invite', () => {
     }, 2, {
       value: "" + Math.pow(10, 18) * 2,
     })
-    await expect(tx).to.be.revertedWith("wrong proof")
+    await expect(tx).to.be.revertedWith("7")
     // 2.3. Try to mint with an account on the presale but incorrect amount => should fail
     proof = await presaleInviteList.proof(presaleAddresses[1])
     let presaleToken = util.getToken(presale[1])
@@ -450,7 +450,7 @@ describe('invite', () => {
     }, 2, {
       value: "" + Math.pow(10, 18),
     })
-    await expect(tx).to.be.revertedWith("wrong amount")
+    await expect(tx).to.be.revertedWith("8")
     // 2.4. Try to mint with an account on the presale, but referencing a wrong merkle root (givawayInviteList instead of presaleInviteList)
     // => should fail
     tx = presaleToken.mint({
@@ -459,7 +459,7 @@ describe('invite', () => {
     }, 2, {
       value: 0
     })
-    await expect(tx).to.be.revertedWith("wrong proof")
+    await expect(tx).to.be.revertedWith("7")
     // 2.5. Try to mint with an account on the presale with correct amount
     // => should work
     tx = await presaleToken.mint({

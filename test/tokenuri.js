@@ -48,7 +48,7 @@ describe('tokenURI', () => {
     })
     // Trying to get tokenURI above supply should fail
     let tokenURI = util.token.tokenURI(10001)
-    await expect(tokenURI).to.be.revertedWith("wrong tokenId")
+    await expect(tokenURI).to.be.revertedWith("15")
 
     // trying to get the exact total supply should work
     tokenURI = await util.token.tokenURI(10000)
@@ -63,6 +63,6 @@ describe('tokenURI', () => {
       permanent: true
     })
     let tokenURI = util.token.tokenURI(0)
-    await expect(tokenURI).to.be.revertedWith("wrong tokenId")
+    await expect(tokenURI).to.be.revertedWith("15")
   })
 })

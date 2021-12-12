@@ -1,9 +1,53 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai')
+const InviteList = require('invitelist');
 const path = require('path')
 const Util = require('./util.js')
 const util = new Util()
 describe('mint', () => {
+  it('should not allow minting with public invite when there is no public invite', async () => {
+    await util.deploy();
+    await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 10000,
+      base: "ipfs://"
+    })
+    let tx = util.token.mint({
+      key: util.all,
+      proof: [],
+    }, 1)
+    await expect(tx).to.be.revertedWith("10") 
+
+    let nextId = await util.token.nextId()
+    expect(nextId.toString()).to.equal("0")
+  })
+  it('should not allow minting with private invite when there is no such private invite', async () => {
+    await util.deploy();
+    await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 10000,
+      base: "ipfs://"
+    })
+    // Create a list made up of signers addresses
+    const list = new InviteList(util.signers.map((s) => { return s.address }))
+    // get merkle root
+    let key = list.root()
+
+    // get proof for alice
+    let proof = list.proof(util.alice.address)
+
+    // try minting with alice address. should work because alice is part of the list
+    let aliceToken = util.getToken(util.alice)
+    let tx = aliceToken.mint({
+      key,
+      proof
+    }, 1)
+    await expect(tx).to.be.revertedWith("10")
+
+    let nextId = await util.token.nextId()
+    expect(nextId.toString()).to.equal("0")
+
+  })
   it('single mint', async () => {
     await util.deploy();
     await util.clone(util.deployer.address, "test", "T", {
@@ -187,7 +231,7 @@ describe('mint', () => {
       key: util.all,
       proof: [],
     }, 11)
-    await expect(tx).to.be.revertedWith("sold out")
+    await expect(tx).to.be.revertedWith("11")
 
     // try to mint 10 => should work
     tx = await util.token.mint({
@@ -218,7 +262,7 @@ describe('mint', () => {
       key: util.all,
       proof: [],
     }, 1)
-    await expect(tx).to.be.revertedWith("wrong amount")
+    await expect(tx).to.be.revertedWith("8")
 
     // try to mint 1 while paying too much => fail
     tx = util.token.mint({
@@ -228,7 +272,7 @@ describe('mint', () => {
     }, 1, {
       value: "" + Math.pow(10, 19)
     })
-    await expect(tx).to.be.revertedWith("wrong amount")
+    await expect(tx).to.be.revertedWith("8")
 
     // try to mint 1 while paying too little => fail
     tx = util.token.mint({
@@ -237,7 +281,7 @@ describe('mint', () => {
     }, 1, {
       value: "" + Math.pow(10, 17)
     })
-    await expect(tx).to.be.revertedWith("wrong amount")
+    await expect(tx).to.be.revertedWith("8")
 
     // try to mint 1 while paying for 1 => should succeed
     let aliceToken = util.getToken(util.alice)

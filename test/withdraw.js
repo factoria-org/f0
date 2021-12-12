@@ -368,7 +368,7 @@ describe('withdraw', () => {
 
     // Alice tries to withdraw when she doesn't own the contract
     tx = aliceToken.withdraw()
-    await expect(tx).to.be.revertedWith("unauthorized")
+    await expect(tx).to.be.revertedWith("4")
 
   })
   it('setWithdrawer can be only called by owner', async () => {

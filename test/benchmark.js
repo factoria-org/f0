@@ -49,4 +49,13 @@ describe('benchmark', () => {
       console.log("gas", gasUsed.toString(), i)
     }
   })
+  it.skip('try gifting a lot of tokens at once', async () => {
+    await util.deploy();
+    await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 10000,
+      base: "ipfs://"
+    })
+    await util.token.gift(util.bob.address,5000)
+  })
 })
