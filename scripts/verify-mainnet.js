@@ -1,7 +1,7 @@
 const hre = require('hardhat');
 const fs = require('fs');
 const path = require('path');
-const net = process.argv[2];
+const net = "mainnet"
 const FACTORY_ABI = require(path.resolve(__dirname, "../abi/contracts/Factory.sol/Factory.json"));
 const FACTORY_JSON = require(path.resolve(__dirname, `../abi/${net}.json`));
 (async () => {

@@ -48,7 +48,7 @@ describe('mint', () => {
     expect(nextId.toString()).to.equal("0")
 
   })
-  it('single mint', async () => {
+  it.only('single mint', async () => {
     await util.deploy();
     await util.clone(util.deployer.address, "test", "T", {
       placeholder: "ipfs://placeholder",
@@ -186,6 +186,72 @@ describe('mint', () => {
     // token 4 doesn't exist
     tx = util.token.ownerOf(4)
     await expect(tx).to.be.revertedWith("ERC721: owner query for nonexistent token")
+  })
+  it('mint multiple times', async () => {
+    await util.deploy();
+    await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 10000,
+      base: "ipfs://"
+    })
+    let tx = await util.token.setInvite(util.all, util._cid, {
+      start: 0,
+      price: 0,
+      limit: 7,
+    })
+    await tx.wait()
+
+    // Alice tries to mint 3 tokens => Should work
+    let aliceToken = util.getToken(util.alice)
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: []
+    }, 1)
+    await tx.wait()
+
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: []
+    }, 1)
+    await tx.wait()
+
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: []
+    }, 1)
+    await tx.wait()
+
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: []
+    }, 1)
+    await tx.wait()
+
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: []
+    }, 1)
+    await tx.wait()
+
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: []
+    }, 1)
+    await tx.wait()
+
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: []
+    }, 1)
+    await tx.wait()
+    // token 1, 2, 3 should be owned by alice
+    let owner = await util.token.ownerOf(1)
+    expect(owner).to.equal(util.alice.address)
+    owner = await util.token.ownerOf(2)
+    expect(owner).to.equal(util.alice.address)
+    owner = await util.token.ownerOf(3)
+    expect(owner).to.equal(util.alice.address)
+
   })
   it('after reaching the total supply, the nextId is the total supply + 1', async () => {
     await util.deploy();

@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { ethers } = require('hardhat');
 const all = ethers.utils.formatBytes32String("")
+const net = process.argv[2];
 const globalLogs = async (factoryAddress) => {
   console.log("factory address", factoryAddress)
   let ABI = require(path.resolve(__dirname, "../abi/contracts/Factory.sol/Factory.json"))
@@ -26,7 +27,7 @@ const deploy = async () => {
   await factory.deployed();
   console.log("factory address", factory.address);
   await fs.promises.mkdir(path.resolve(__dirname, "../abi"), { recursive: true }).catch((e) => {})
-  await fs.promises.writeFile(path.resolve(__dirname, "../abi/Deployed.json"), JSON.stringify({ address: factory.address }))
+  await fs.promises.writeFile(path.resolve(__dirname, `../abi/${net}.json`), JSON.stringify({ address: factory.address }))
   return factory;
 }
 (async () => {

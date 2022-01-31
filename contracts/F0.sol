@@ -74,6 +74,7 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
   uint private feeUsed;
   string public URI;
   address public royalty;
+  mapping (address => mapping(bytes32 => uint)) private minted;
 
   /**********************************************************
   *
@@ -171,12 +172,13 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     require(verify(auth, _msgSender()), "7");
     require(i.price * _count == msg.value, "8");
     require(i.start <= block.timestamp, "9");
-    require(balanceOf(_msgSender()) + _count <= i.limit, "10");
+    require(minted[_msgSender()][auth.key] + _count <= i.limit, "10");
     require(n+_count-1 <= config.supply, "11");
     for(uint k=0; k<_count; k++) {
       _safeMint(_msgSender(), n+k);
     }
     nextId = n + _count;
+    minted[_msgSender()][auth.key] += _count;
   }
   function gift(address _receiver, uint _count) external onlyOwner {
     // first time: nextId is 0 => n is 1

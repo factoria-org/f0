@@ -187,6 +187,239 @@ describe('invite', () => {
     let owner = await util.token.ownerOf(1)
     expect(owner).to.equal(util.alice.address)
   })
+  it('invite quota should not flow over to other invites', async () => {
+    // there may be multiple invites, each with its own mint limit count
+    // if you are on multiple invites, you should be able to mint the amount allocated for each invite
+    // for example if you're on inviteA with 2 limit, inviteB with 2 limit,
+    // you should be able to mint total of 4
+    await util.deploy();
+    // initial supply is 10
+    let tx = await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 100,
+      base: "ipfs://bafy/",
+      permanent: false
+    })
+
+    // Create a list made up of signers addresses
+    // AIRDROP
+    const list1 = new InviteList(util.signers.map((s) => {
+      return s.address
+    }))
+    // get merkle root
+    let key1 = list1.root()
+
+    // PRIVATE SALE
+    const list2 = new InviteList(util.signers.slice(0,-1).map((s) => {
+      return s.address
+    }))
+    // get merkle root
+    let key2 = list2.root()
+
+    // AIRDROP: invite the list to mint at most 2 for FREE
+    tx = await util.token.setInvite(key1, util._cid, {
+      price: 0,
+      limit: 2,
+      start: 0,
+    })
+    await tx.wait()
+
+    // PREDALE: invite the list to mint at most 2 for 0.01ETH
+    tx = await util.token.setInvite(key2, util._cid, {
+      price: "" + Math.pow(10, 16),
+      limit: 2,
+      start: 0,
+    })
+    await tx.wait()
+
+    // get airdrop proof for alice
+    let proof1 = list1.proof(util.alice.address)
+
+    // Try to mint 1 => should go through
+
+    // try minting with alice address. should work because alice is part of the list
+    let aliceToken = util.getToken(util.alice)
+    tx = await aliceToken.mint({
+      key: key1,
+      proof: proof1
+    }, 2)
+    await tx.wait()
+
+    // Try to mint another 2 from the same list => should fail
+    tx = aliceToken.mint({
+      key: key1,
+      proof: proof1
+    }, 2)
+    await expect(tx).to.be.revertedWith("10")
+
+    // Try to mint with the PRESALE list => should work
+    let proof2 = list2.proof(util.alice.address)
+    tx = await aliceToken.mint({
+      key: key2,
+      proof: proof2
+    }, 2, {
+      value: "" + 2 * Math.pow(10, 16)
+    })
+    await tx.wait()
+
+    // total balance of alice is 4
+    let b = await aliceToken.balanceOf(util.alice.address)
+    console.log(b)
+    expect(b).to.equal(4)
+
+    // try to mint even more with presale => wont work
+    tx = aliceToken.mint({
+      key: key2,
+      proof: proof2
+    }, 2, {
+      value: "" + 2 * Math.pow(10, 16)
+    })
+    await expect(tx).to.be.revertedWith("10")
+
+    // try to mint even more with airdrop => won't work 
+    tx = aliceToken.mint({
+      key: key1,
+      proof: proof1
+    }, 2)
+    await expect(tx).to.be.revertedWith("10")
+
+
+    // PUBLIC SALE
+    tx = await util.token.setInvite(util.all, util._cid, {
+      start: 0,
+      price: 0,
+      limit: 1,
+    })
+    await tx.wait()
+
+    // should work because public invite quota is separate from other invites
+    tx = await aliceToken.mint({
+      key: util.all,
+      proof: [],
+    }, 1)
+    await tx.wait()
+
+
+  })
+  it('invite counter must be counted per each token minted, not each minting attempt', async () => {
+    await util.deploy();
+    // initial supply is 10
+    let tx = await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 100,
+      base: "ipfs://bafy/",
+      permanent: false
+    })
+
+    // Create a list made up of signers addresses
+    // AIRDROP
+    const list1 = new InviteList(util.signers.map((s) => {
+      return s.address
+    }))
+    // get merkle root
+    let key1 = list1.root()
+
+    // AIRDROP: invite the list to mint at most 2 for FREE
+    tx = await util.token.setInvite(key1, util._cid, {
+      price: 0,
+      limit: 2,
+      start: 0,
+    })
+    await tx.wait()
+
+    // get airdrop proof for alice
+    let proof1 = list1.proof(util.alice.address)
+
+    // Try to mint 2 => should go through
+    let aliceToken = util.getToken(util.alice)
+    tx = await aliceToken.mint({
+      key: key1,
+      proof: proof1
+    }, 2)
+    await tx.wait()
+
+    // Try to mint 1 => shoudl fail. If the counter were incrementing per minting attempt,
+    // the counter would be at 1 because the last mint minted 2 in one go
+
+    aliceToken = util.getToken(util.alice)
+    tx = aliceToken.mint({
+      key: key1,
+      proof: proof1
+    }, 1)
+    await expect(tx).to.be.revertedWith(10)
+
+
+
+    
+  })
+  it("should not allow people to mint multiple times after transferring their tokens", async () => {
+    // when the invite list policy is dictated by the current balance of the minter,
+    // the minter can hack around it by minting, and then sending the tokens to another address,
+    // and then minting again.
+    // Let's prevent this scenario from happening.
+    await util.deploy();
+    // initial supply is 10
+    let tx = await util.clone(util.deployer.address, "test", "T", {
+      placeholder: "ipfs://placeholder",
+      supply: 100,
+      base: "ipfs://bafy/",
+      permanent: false
+    })
+
+    // Create a list made up of signers addresses
+    const list = new InviteList(util.signers.map((s) => {
+      return s.address
+    }))
+    // get merkle root
+    let key = list.root()
+
+    // AIRDROP: invite the list to mint at most 1 for FREE
+    tx = await util.token.setInvite(key, util._cid, {
+      price: 0,
+      limit: 1,
+      start: 0,
+    })
+    await tx.wait()
+
+    // get proof for alice
+    let proof = list.proof(util.alice.address)
+
+    // Try to mint 1 => should go through
+
+    // try minting with alice address. should work because alice is part of the list
+    let aliceToken = util.getToken(util.alice)
+    tx = await aliceToken.mint({
+      key,
+      proof
+    }, 1)
+    await tx.wait()
+
+    // Try to mint another 1 => should fail
+    tx = aliceToken.mint({
+      key,
+      proof
+    }, 1)
+
+    await expect(tx).to.be.revertedWith("10")
+
+
+    // owner of token 1 is alice
+    let owner = await aliceToken.ownerOf(1)
+    console.log(owner)
+    expect(owner).to.be.equal(util.alice.address)
+
+    // Transfer to another address, and then try to mint 1 => should NOT go through
+    tx = await aliceToken["safeTransferFrom(address,address,uint256)"](util.alice.address, util.bob.address, 1)
+    tx = aliceToken.mint({
+      key,
+      proof
+    }, 1)
+    await expect(tx).to.be.revertedWith("10")
+
+
+  })
+
+
   it('merkle drop try with wrong proof shouldnt work', async () => {
     await util.deploy();
 

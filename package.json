@@ -11,14 +11,14 @@
     "build:js": "node_modules/.bin/webpack",
     "build": "npm run build:solidity && npm run build:js",
     "test": "npx hardhat test",
-    "deploy:solidity-localhost": "npx hardhat run --network localhost scripts/deploy.js",
-    "deploy:solidity-rinkeby": "npx hardhat run --network rinkeby scripts/deploy.js",
-    "deploy:solidity-mainnet": "npx hardhat run --network mainnet scripts/deploy.js",
+    "deploy:solidity-localhost": "npx hardhat deploy --network localhost",
+    "deploy:solidity-rinkeby": "npx hardhat deploy --network rinkeby",
+    "deploy:solidity-mainnet": "npx hardhat deploy --network mainnet",
     "deploy:local": "npm run build:solidity && npm run deploy:solidity-localhost",
     "deploy:rinkeby": "npm run build:solidity && npm run deploy:solidity-rinkeby",
     "deploy:mainnet": "npm run build:solidity && npm run deploy:solidity-mainnet",
-    "verify:rinkeby": "npx hardhat run --network rinkeby scripts/verify.js",
-    "verify:mainnet": "npx hardhat run --network mainnet scripts/verify.js"
+    "verify:rinkeby": "npx hardhat v --network rinkeby",
+    "verify:mainnet": "npx hardhat v --network mainnet"
   },
   "author": "factoria-org",
   "license": "BUSL-1.1",
@@ -34,7 +34,7 @@
     "hardhat": "^2.6.6",
     "hardhat-abi-exporter": "^2.3.0",
     "hardhat-contract-sizer": "^2.1.1",
-    "hardhat-gas-reporter": "^1.0.4",
+    "hardhat-gas-reporter": "^1.0.6",
     "multiformats": "^9.4.14",
     "solhint": "^3.3.6"
   },
