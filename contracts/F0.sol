@@ -61,6 +61,11 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     address account;
     bool permanent;
   }
+  struct Invitelist {
+    bytes32 key;
+    bytes32 cid;
+    Invite invite;
+  }
 
   /**********************************************************
   *
@@ -110,6 +115,14 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     require(!withdrawer.permanent, "3");
     withdrawer = _withdrawer; 
     emit WithdrawerUpdated(_withdrawer);
+  }
+  function setInvites(Invitelist[] calldata invitelist) external onlyOwner {
+    if (nextId==0) nextId = 1;  // delay nextId setting until the first invite is made.
+    for(uint i=0; i<invitelist.length; i++) {
+      Invitelist calldata list = invitelist[i];
+      invite[list.key] = list.invite;
+      emit Invited(list.key, list.cid);
+    }
   }
   function setInvite(bytes32 _key, bytes32 _cid, Invite calldata _invite) external onlyOwner {
     if (nextId==0) nextId = 1;  // delay nextId setting until the first invite is made.

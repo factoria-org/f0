@@ -48,6 +48,7 @@ module.exports = {
 //  solidity: "0.8.4",
   gasReporter: {
     currency: "USD",
+//    gasPrice: 60,
 //    gasPrice: 80,
 //    gasPrice: 150,
     coinmarketcap: "abb5abcf-5b1f-443b-873f-3bc21d6019f7",
@@ -82,6 +83,8 @@ module.exports = {
       accounts: [process.env.RINKEBY_PRIVATE_KEY],
     },
     mainnet: {
+      //gasPrice: 60000000000,
+      gasPrice: 50000000000,
       //gasPrice: 80000000000,
       //gasPrice: 96000000000,
       timeout: 1000 * 60 * 60 * 24, // 1 day

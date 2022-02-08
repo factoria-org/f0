@@ -701,6 +701,53 @@
   {
     "inputs": [
       {
+        "components": [
+          {
+            "internalType": "bytes32",
+            "name": "key",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "cid",
+            "type": "bytes32"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint128",
+                "name": "price",
+                "type": "uint128"
+              },
+              {
+                "internalType": "uint64",
+                "name": "start",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "limit",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct F0.Invite",
+            "name": "invite",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct F0.Invitelist[]",
+        "name": "invitelist",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "setInvites",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "string",
         "name": "name_",
         "type": "string"

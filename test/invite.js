@@ -29,7 +29,7 @@ describe('invite', () => {
     })
     expect(invitedLogs.length).to.equal(0)
   })
-  it('calling invite() should create an invite object', async () => {
+  it('calling setInvite() should create an invite object', async () => {
     await util.deploy();
     await util.clone(
       util.deployer.address,
@@ -65,6 +65,65 @@ describe('invite', () => {
     expect(i.price).to.equal(42)
     expect(i.start).to.equal(0)
     expect(i.limit).to.equal(3)
+  })
+  it('calling setInvites() should create multiple invite objects', async () => {
+    await util.deploy();
+    await util.clone(
+      util.deployer.address,
+      "test",
+      "T",
+      {
+        placeholder: "ipfs://placeholder",
+        supply: 10000,
+        base: "ipfs://"
+      }
+    )
+    // Create a list made up of signers addresses
+    const list = new InviteList(util.signers.map((s) => {
+      return s.address
+    }))
+    // get merkle root
+    let key = list.root()
+
+    let tx = await util.token.setInvites([{
+      key: util.all,
+      cid: util._cid,
+      invite: {
+        start: 0,
+        price: 42,
+        limit: 3,
+      }
+    }, {
+      key: key,
+      cid: util._cid,
+      invite: {
+        price: 0,
+        limit: 1,
+        start: 0,
+      }
+    }])
+    await tx.wait()
+
+    // 1. Check logs => Only one item
+    let logs = await util.globalLogs()
+    let invitedLogs = logs.filter((log) => {
+      return log.name == "Invited"
+    })
+    expect(invitedLogs.length).to.equal(2)
+    expect(invitedLogs[0].args.key).to.equal(util.all)
+    expect(invitedLogs[1].args.key).to.equal(key)
+
+    // 2. Check "all" invite
+    let i = await util.token.invite(util.all)
+    expect(i.price).to.equal(42)
+    expect(i.start).to.equal(0)
+    expect(i.limit).to.equal(3)
+
+    i = await util.token.invite(key)
+    expect(i.price).to.equal(0)
+    expect(i.start).to.equal(0)
+    expect(i.limit).to.equal(1)
+
   })
   it('calling invite multiple times should overwrite the invite object but keep appending to the log', async () => {
     await util.deploy();

@@ -48,7 +48,7 @@ describe('mint', () => {
     expect(nextId.toString()).to.equal("0")
 
   })
-  it.only('single mint', async () => {
+  it('single mint', async () => {
     await util.deploy();
     await util.clone(util.deployer.address, "test", "T", {
       placeholder: "ipfs://placeholder",
