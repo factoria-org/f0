@@ -63,9 +63,9 @@ contract ERC721Upgradeable is Initializable, ContextUpgradeable, ERC165Upgradeab
      */
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165Upgradeable, IERC165Upgradeable) returns (bool) {
         return
-        interfaceId == type(IERC721Upgradeable).interfaceId ||
-        interfaceId == type(IERC721MetadataUpgradeable).interfaceId ||
-        super.supportsInterface(interfaceId);
+            interfaceId == type(IERC721Upgradeable).interfaceId ||
+            interfaceId == type(IERC721MetadataUpgradeable).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     /**
@@ -350,7 +350,7 @@ contract ERC721Upgradeable is Initializable, ContextUpgradeable, ERC165Upgradeab
         _beforeTokenTransfer(from, to, tokenId);
 
         // Clear approvals from the previous owner
-        delete _tokenApprovals[tokenId];
+        _approve(address(0), tokenId);
 
         _balances[from] -= 1;
         _balances[to] += 1;
