@@ -323,7 +323,7 @@ describe('invite', () => {
 
     // total balance of alice is 4
     let b = await aliceToken.balanceOf(util.alice.address)
-    console.log(b)
+    //console.log(b)
     expect(b).to.equal(4)
 
     // try to mint even more with presale => wont work
@@ -335,7 +335,7 @@ describe('invite', () => {
     })
     await expect(tx).to.be.revertedWith("10")
 
-    // try to mint even more with airdrop => won't work 
+    // try to mint even more with airdrop => won't work
     tx = aliceToken.mint({
       key: key1,
       proof: proof1
@@ -409,7 +409,7 @@ describe('invite', () => {
 
 
 
-    
+
   })
   it("should not allow people to mint multiple times after transferring their tokens", async () => {
     // when the invite list policy is dictated by the current balance of the minter,
@@ -464,7 +464,7 @@ describe('invite', () => {
 
     // owner of token 1 is alice
     let owner = await aliceToken.ownerOf(1)
-    console.log(owner)
+    //console.log(owner)
     expect(owner).to.be.equal(util.alice.address)
 
     // Transfer to another address, and then try to mint 1 => should NOT go through

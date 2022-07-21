@@ -321,7 +321,7 @@ describe('withdraw', () => {
     // Step 5. 10ETH * 100 => 1000 ETH revenue => The 1ETH fee cap has been reached so no more fee going forward:  0 fee
     await invite(Math.pow(10, 19))
     factoriaBalanceBefore = await ethers.provider.getBalance(FACTORIA);
-    r = await makeMoney(Math.pow(10, 18)*10, 100, true)   // make money without redeploying  
+    r = await makeMoney(Math.pow(10, 18)*10, 100, true)   // make money without redeploying
     factoriaBalanceAfter = await ethers.provider.getBalance(FACTORIA);
 
     // Final result is equal to

@@ -33,7 +33,7 @@ const pubInvite = async () => {
     limit: 300,
   })
   await tx.wait()
-  return { key: util.all, proof: [] } 
+  return { key: util.all, proof: [] }
 }
 describe('nextId edge case testing', () => {
   describe('gift', () => {
@@ -53,13 +53,13 @@ describe('nextId edge case testing', () => {
       await util.token.mint(auth, 1)
 
       // tokenId 1 owned by deployer
-      let owner = await util.token.ownerOf(1) 
+      let owner = await util.token.ownerOf(1)
       expect(owner).to.equal(util.deployer.address)
 
       // tokenId 2 doesn't exist
-      owner = util.token.ownerOf(2) 
-      await expect(owner).to.be.revertedWith("ERC721: owner query for nonexistent token")
-      
+      owner = util.token.ownerOf(2)
+      await expect(owner).to.be.revertedWith("ERC721: invalid token ID")
+
       // nextId should be 2
       let nextId = await util.token.nextId()
       expect(nextId).to.equal(2)
@@ -161,13 +161,13 @@ describe('nextId edge case testing', () => {
       await util.token.gift(util.alice.address, 1)
 
       // tokenId 1 owned by alice
-      let owner = await util.token.ownerOf(1) 
+      let owner = await util.token.ownerOf(1)
       expect(owner).to.equal(util.alice.address)
 
       // tokenId 2 doesn't exist
-      owner = util.token.ownerOf(2) 
-      await expect(owner).to.be.revertedWith("ERC721: owner query for nonexistent token")
-      
+      owner = util.token.ownerOf(2)
+      await expect(owner).to.be.revertedWith("ERC721: invalid token ID")
+
       // nextId should be 2
       let nextId = await util.token.nextId()
       expect(nextId).to.equal(2)
@@ -189,7 +189,7 @@ describe('nextId edge case testing', () => {
     it('private invite => mint 0 => nextId should be 1', async () => {
       await deploy()
       let auth = await privInvite(util.alice.address)
-      console.log("auth", auth)
+      //console.log("auth", auth)
       let aliceToken = util.getToken(util.alice)
       await aliceToken.mint(auth, 0)
       let nextId = await util.token.nextId()

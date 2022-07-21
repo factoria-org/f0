@@ -16,7 +16,7 @@ describe('mint', () => {
       key: util.all,
       proof: [],
     }, 1)
-    await expect(tx).to.be.revertedWith("10") 
+    await expect(tx).to.be.revertedWith("10")
 
     let nextId = await util.token.nextId()
     expect(nextId.toString()).to.equal("0")
@@ -185,7 +185,7 @@ describe('mint', () => {
 
     // token 4 doesn't exist
     tx = util.token.ownerOf(4)
-    await expect(tx).to.be.revertedWith("ERC721: owner query for nonexistent token")
+    await expect(tx).to.be.revertedWith("ERC721: invalid token ID")
   })
   it('mint multiple times', async () => {
     await util.deploy();
@@ -332,7 +332,7 @@ describe('mint', () => {
 
     // try to mint 1 while paying too much => fail
     tx = util.token.mint({
-      account: util.alice.address, 
+      account: util.alice.address,
       key: util.all,
       proof: [],
     }, 1, {

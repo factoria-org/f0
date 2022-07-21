@@ -2,14 +2,15 @@
 pragma solidity ^0.8.4;
 //import 'hardhat/console.sol';
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "./F0.sol";
-contract Factory is OwnableUpgradeable {
+contract Factory is ContextUpgradeable{
   event CollectionAdded(address indexed sender, address indexed receiver, address collection);
   address public immutable implementation;
   constructor() {
     implementation = address(new F0());
-    __Ownable_init();
+    // Disable the Initializers for the implementation contract, so they can not be called outside the proxy's context
+    _disableInitializers();
   }
   /********************************************************************************
   *
