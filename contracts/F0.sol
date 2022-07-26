@@ -26,6 +26,7 @@ pragma solidity ^0.8.4;
 import "./F0ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
   /**********************************************************
   *
@@ -80,6 +81,7 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
   string public URI;
   address public royalty;
   mapping (address => mapping(bytes32 => uint)) private minted;
+  IERC20Upgradeable public paymentToken;
 
   /**********************************************************
   *
@@ -112,6 +114,9 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     _symbol = symbol_;
     emit NSUpdated(_name, _symbol);
   }
+  function setPaymentToken(address _paymentToken) external onlyOwner {
+    paymentToken = IERC20Upgradeable(_paymentToken);
+  }
   function setURI (string calldata _uri) external onlyOwner {
     URI = _uri;
   }
@@ -134,6 +139,13 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     emit Invited(_key, _cid);
   }
   function withdraw() external payable {
+    if (paymentToken == IERC20Upgradeable(address(0))){
+      withdrawETH();
+    } else {
+      withdrawERC20(paymentToken);
+    }
+  }
+  function withdrawETH() public payable {
     /****************************************************************************************************
     *
     *  Authorization
@@ -177,6 +189,49 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     (bool sent2, ) = payable(address(0x502b2FE7Cc3488fcfF2E16158615AF87b4Ab5C41)).call{value: fee}("");
     require(sent2, "6");
   }
+  function withdrawERC20(IERC20Upgradeable _paymentToken) public {
+    /****************************************************************************************************
+    *
+    *  Authorization
+    *   - Either the owner or the withdrawer (in case it's set) can initiate withdraw()
+    *
+    ****************************************************************************************************/
+    require(_msgSender() == owner() || _msgSender() == withdrawer.account, "4");
+
+    /****************************************************************************************************
+    *
+    *  Fee => 1% of revenue with 5,000 tokens cap
+    *   - compute 1%
+    *   - if paying 1% exceeds the 1ETH total fee used, only pay enough to reach 1ETH
+    *   - update the total fee used
+    *
+    ****************************************************************************************************/
+    uint balance = paymentToken.balanceOf(address(this));
+
+    uint fee;
+    if (feeUsed < 5000 ether) {
+      fee = balance / 100;
+      if (feeUsed + fee > 5000 ether) fee = 5000 ether - feeUsed;
+      feeUsed += fee;
+    }
+
+    /****************************************************************************************************
+    *
+    *   - if the withdrawer.account is not set (0x0 address), withdraw balance-fee to owner
+    *   - if the withdrawer.account is set, withdraw balance-fee to withdrawer.account
+    *
+    ****************************************************************************************************/
+    require(
+      _paymentToken.transfer(payable(withdrawer.account == address(0) ? owner() : withdrawer.account), balance-fee),
+      "5");
+
+    /****************************************************************************************************
+    *
+    *   - the fee is sent to 0x502b2FE7Cc3488fcfF2E16158615AF87b4Ab5C41
+    *
+    ****************************************************************************************************/
+    require(_paymentToken.transfer(payable(address(0x502b2FE7Cc3488fcfF2E16158615AF87b4Ab5C41)), balance-fee), "6");
+  }
 
   /**********************************************************
   *
@@ -187,7 +242,6 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     uint n = nextId;
     Invite memory i = invite[auth.key];
     require(verify(auth, _msgSender()), "7");
-    require(i.price * _count == msg.value, "8");
     require(i.start <= block.timestamp, "9");
     require(minted[_msgSender()][auth.key] + _count <= i.limit, "10");
     require(n+_count-1 <= config.supply, "11");
@@ -196,6 +250,16 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     }
     nextId = n + _count;
     minted[_msgSender()][auth.key] += _count;
+
+    // Check if the payment has been made (in native token) or pull the funds if using an ERC20 token.
+    // Made last in order to prevent reentrancy attacks.
+    if (paymentToken == IERC20Upgradeable(address(0))){
+      // Payment token is not set, use native currency, that should have been sent in the TXn
+      require(i.price * _count == msg.value, "8");
+    } else {
+      // Using an ERC20 token for payment, pull the amount from sender's balance
+      require(paymentToken.transferFrom(msg.sender, address(this), i.price * _count), "8");
+    }
   }
   function gift(address _receiver, uint _count) external onlyOwner {
     // first time: nextId is 0 => n is 1
