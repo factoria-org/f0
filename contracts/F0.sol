@@ -83,9 +83,13 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
 
   /**********************************************************
   *
-  *  INITIALIZER
+  *  INITIALIZER / constructor
   *
   **********************************************************/
+  constructor() {
+    // Disable the Initializers for the implementation contract, so they can not be called outside the proxy's context
+    _disableInitializers();
+  }
   function initialize(string memory name, string memory symbol, Config calldata _config) initializer external {
     __ERC721_init(name, symbol);
     __Ownable_init();
@@ -104,7 +108,7 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
   }
   function setNS(string calldata name_, string calldata symbol_) external onlyOwner {
     require(!config.permanent, "2");
-    _name = name_; 
+    _name = name_;
     _symbol = symbol_;
     emit NSUpdated(_name, _symbol);
   }
@@ -113,7 +117,7 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
   }
   function setWithdrawer(Withdrawer calldata _withdrawer) external onlyOwner {
     require(!withdrawer.permanent, "3");
-    withdrawer = _withdrawer; 
+    withdrawer = _withdrawer;
     emit WithdrawerUpdated(_withdrawer);
   }
   function setInvites(Invitelist[] calldata invitelist) external onlyOwner {
@@ -261,7 +265,7 @@ contract F0 is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     return string(buffer);
   }
   function verify(Auth calldata auth, address account) internal pure returns (bool) {
-    if (auth.key == "") return true; 
+    if (auth.key == "") return true;
     bytes32 computedHash = keccak256(abi.encodePacked(account));
     for (uint256 i = 0; i < auth.proof.length; i++) {
       bytes32 proofElement = auth.proof[i];

@@ -19,7 +19,7 @@ describe('benchmark', () => {
     })
     await tx.wait()
 
-    let logs = await util.globalLogs() 
+    let logs = await util.globalLogs()
     let lastLog = logs[logs.length-1];
     let hex = "1220" + lastLog.args.cid.slice(2)
 

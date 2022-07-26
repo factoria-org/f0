@@ -30,7 +30,7 @@ describe('burn tokens', () => {
     await tx.wait()
     // The token should not exist
     owner = util.token.ownerOf(1)
-    await expect(owner).to.be.revertedWith("ERC721: owner query for nonexistent token")
+    await expect(owner).to.be.revertedWith("ERC721: invalid token ID")
   })
   it('cannot burn token if you are not the owner', async () => {
     await util.deploy();

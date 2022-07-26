@@ -52,11 +52,11 @@ describe('gift', () => {
     // nextId should be 2 because 1 has been minted
     let nextId = await util.token.nextId()
     expect(nextId.toString()).to.equal("2")
-    let owner = await util.token.ownerOf(1) 
+    let owner = await util.token.ownerOf(1)
     expect(owner).to.equal(util.bob.address)
 
-    owner = util.token.ownerOf(2) 
-    await expect(owner).to.be.revertedWith("ERC721: owner query for nonexistent token")
+    owner = util.token.ownerOf(2)
+    await expect(owner).to.be.revertedWith("ERC721: invalid token ID")
 
   })
   it('gift two tokens and check nextId', async () => {
@@ -74,11 +74,11 @@ describe('gift', () => {
     let nextId = await util.token.nextId()
     expect(nextId.toString()).to.equal("3")
     for(let i=1; i<=2; i++) {
-      let owner = await util.token.ownerOf(i) 
+      let owner = await util.token.ownerOf(i)
       expect(owner).to.equal(util.bob.address)
     }
     let owner = util.token.ownerOf(3)
-    await expect(owner).to.be.revertedWith("ERC721: owner query for nonexistent token")
+    await expect(owner).to.be.revertedWith("ERC721: invalid token ID")
   })
   it('gift tokens to alice', async () => {
     await util.deploy();
@@ -92,7 +92,7 @@ describe('gift', () => {
     await tx.wait()
     // the 3 tokens are now owned by bob
     for(let i=1; i<=3; i++) {
-      let owner = await util.token.ownerOf(i) 
+      let owner = await util.token.ownerOf(i)
       expect(owner).to.equal(util.bob.address)
     }
   })
